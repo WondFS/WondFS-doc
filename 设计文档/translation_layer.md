@@ -1,3 +1,5 @@
+# Translation Layer
+
 ## 基本设计
 
 Translation Layer的设计来源于FTL（Flash Translation Layer），但是在功能和目的上都与FTL有很大的不同。在了解Translation Layer之前，我们需要先介绍FTL。
@@ -17,6 +19,8 @@ Translation Layer的设计来源于FTL（Flash Translation Layer），但是在�
 由于磁盘
 
 ### 坏块管理
+
+
 
 ### 纠错编码
 
