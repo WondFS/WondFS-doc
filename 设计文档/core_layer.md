@@ -115,3 +115,17 @@ CoreManager对磁盘的写入操作会修改page的使用情况，通过set_page
 
 
 
+### CoreManager
+
+#### 相关数据结构
+
+
+
+#### 核心函数
+
+##### BIT相关
+
+**read_bit**
+
+读取
+
