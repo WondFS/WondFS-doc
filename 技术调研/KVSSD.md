@@ -20,7 +20,7 @@
 - 元数据区中的闪存页存储K2P索引，即key范围及其页表指针，数据区中的闪存页存储KV对数据
 
 
-![Image](https://user-images.githubusercontent.com/33679152/170647490-67e2e2ab-5f19-4e7b-9bcc-59942c2a917c.png)
+![Image]("./WondFS-doc/技术调研/截屏2022-05-23 下午3.03.32.png")
 
 
 
