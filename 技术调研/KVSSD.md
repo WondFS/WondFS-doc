@@ -13,6 +13,14 @@
 - 文件系统中的块I/O大小与闪存页大小不匹配（4K VS 32KB），写入或更新操作采用的read-modify-write机制会带来第二层放大
 - 由于闪存存在的写前擦除特性，FTL中不定时执行垃圾回收将带来第三层放大
 
+## 【总体设计】
+- 下图给出了KVSSD的整体构造，其在闪存中实现了一颗LSM-tree，称作NAND-flash-LSM(nLSM)
+- nLSMS构造成一颗key范围树，用于代替传统FTL中的L2P映射表，进而维护K2P映射
+- nLSMS中的每个节点指向一块用于存储元数据的闪存页，进而将整个闪存划分成元数据区和数据区
+- 元数据区中的闪存页存储K2P索引，即key范围及其页表指针，数据区中的闪存页存储KV对数据
+
+
+![Image](https://user-images.githubusercontent.com/33679152/170647490-67e2e2ab-5f19-4e7b-9bcc-59942c2a917c.png)
 
 
 
