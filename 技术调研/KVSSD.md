@@ -19,8 +19,34 @@
 - nLSMS中的每个节点指向一块用于存储元数据的闪存页，进而将整个闪存划分成元数据区和数据区
 - 元数据区中的闪存页存储K2P索引，即key范围及其页表指针，数据区中的闪存页存储KV对数据
 
+![Image](https://user-images.githubusercontent.com/33679152/170648558-adce7a11-f34f-4932-991e-6883bf900db0.png)
 
-![Image]("./WondFS-doc/技术调研/截屏2022-05-23 下午3.03.32.png")
+## 【设计优点】
+- 上层以键值对的方式读写数据，每次只需读取闪存页中的若干个键值对，进而消除了read-modify-write操作 （我这么理解对吗？原文是it allocates flash pages to SSTable to eliminate read-modify-write operations，emm，将闪存页分配到SSTable上？？？）
+- 将元数据闪存页重映射到KV对数据页上可以降低SSTable compaction操作 （下面会介绍，就修改映射关系，数据不需要移动）
+- 将不同层级的KV对数据映射到树的不同层级上，方便进行冷热分离，做垃圾回收
+
+## 【K2P映射】
+- K2P映射的目的是根据目标KV对的key找到物理闪存页地址，然而完全解析K2P的开销极大，仅使用SSD内部的RAM无法存储下相应的映射表
+- 本文提出key范围树来完成K2P映射
+- key范围树中的节点包含该节点的key值范围[min, max]和该节点指向的元数据闪存页物理地址
+-  元数据闪存页中包含每个KV对数据闪存页中的key值范围[min, max]和对应的闪存物理页地址
+- 查询过程：给定目标KV对，使用key查询key范围树，依次比对节点范围，找到对应的元数据闪存页，在元数据闪存页中，依次比对节点范围，找到对应的数据闪存页，进而在闪存页中遍历查找到对应的KV对
+
+## 【SSTable分配】
+- 每张SSTable对应一个闪存块，大小为4MB
+- 垃圾回收的对象是闪存块
+
+## 【重映射Compaction】
+- 重映射Compaction就是在SSTable compation过程中并非实际移动数据闪存页，而是修改元数据闪存块中的隐射关系
+- 重映射虽然可以大幅度降低写放大，但会由于不同版本的键值对的存在造成了读放大 （This is because if the target key is within the key range of an overlap page, then the overlap page must be examined before the other pages in the same SSTable）
+- 通过在SSTable中维护一个计数器，用于标记来自不同层级的KV对数量，从而决定是否启动重隐射Compation
+
+## 【冷热分离和垃圾回收】
+- LSM-tree中层级越往下，热度越低，因而在垃圾回收的时候尽可能在同一级KV页中写入数据，进而保证相似寿命的页面分配到相似的闪存块中
+
+
+
 
 
 
