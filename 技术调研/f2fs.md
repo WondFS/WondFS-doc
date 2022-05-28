@@ -10,4 +10,15 @@ F2FS 文件系统全称为 Flash Friendly File System，是专为 NAND 闪存设
 5)	段总结区：主要保存了主区域中所有块对应的文件索引节点以及偏移，并维护数据与逻辑块地址（LBA）的映射关系。 
 6)	主区域：以 4KB 粒度进行块分配，块划分为数据块（Data Block）和节点块（Node Block），其中节点块用于存储文件的索引信息或是指向数据块的索引信息，而数据块主要存储目录文件或普通文件。
  
- 
+![Image](https://user-images.githubusercontent.com/33679152/170817421-0ccb17ea-8cb3-45e2-b4f9-9a375e40bd9c.png)
+
+
+## 【空间管理】
+由于闪存设备的读写操作是基于闪存页进行的，而闪存页大小一般是 4KB 的整数倍，为了适应闪存器件特性，与闪存操作的基本单位相一致，设置 F2FS 文件系统最小数据块（Block）大小为 4KB，最小管理单元段（Segment）大小为 2MB，每个段包含 512 个数据块（节点块）。另外，由于固态盘的垃圾回收操作是基于闪存块进行的，因此，设置 F2FS 文件系统垃圾回收的最小单元节（Section）大小与闪存块大小一致。
+F2FS 文件系统有两种空闲空间管理方案：正常日志（Normal Logging）和线程日志（Threaded Logging） 。 
+在正常日志中，严格按照顺序方式在日志尾追加写入数据，但是随着空闲空间减少，该方案会带来高昂的清理开销，导致系统性能下降。而线程日志则将数据写入脏段的孔（无效、过时的空间）中，此方案没有清理过程，但会带来随机写入。F2FS 文件系统根据空闲空间的比例在正常日志和线程日志之间动态切换，默认情况下，当空闲空间比较多时，采用正常日志，当空闲空间低于总空间的 5%时，采用线程日志。
+
+## 【垃圾回收】
+1)	Victim selection: 选择回收哪个脏单元节（section）。Greedy方式回收包含有效块最少的脏单元节（前台使用）。Cost-benefit方式综合考虑利用率和寿命两项因素，回收脏单元节（section）。单元节的冷热可从SIT区获取每个单元段(Section)的热度进行计算。（后台使用）
+2)	Valid block identification and migration：SIT中bitmap记录了block的有效性，SSA记录了block的parent inode。后台迁移时可以利用往 page cache重新写入valid block方式，将需要迁移的block再次主动flush到新的单元段(Section)t中，一方面降低I/O，一方面将小文件拼凑成大文件。
+3)	Post-clearning process：数据块迁移以后，并不能直接使用，需要打上pre-free tag 并完成checkpoint记录才能使用。（因为crash恢复时，checkpoint可能回用到之前被回收的数据块） 
