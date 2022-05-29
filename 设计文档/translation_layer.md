@@ -18,10 +18,6 @@ Translation Layer的设计来源于FTL（Flash Translation Layer），但是在�
 
 因为Flash中的数据块在使用过程中，可能会出现坏块，即数据损毁的情况，当一个正在使用中的数据块损坏了，我们需要将其映射到一个可用的空白块中，这是因为连续的逻辑地址更便于上层的实现，这是坏块管理的一部分。我们需要将逻辑地址和物理地址之间的映射关系持久化到Flash中，在这里，我们会将其写在类型为MappingTable的物理块中。需要着重注意的是，FTL中也有这样一层的映射，但这里的两个映射其实是截然不同的，FTL的映射是为了给上层的传统针对机械硬盘设计的文件系统提供一个模拟块设备的接口。但是Translation Layer的映射只会发生在出现坏块的情况下，也就是正常的块的物理地址和逻辑地址是相同，并不需要持久化存储，这对于存储来说也是一种优化。当Reserved Region中的某一数据块被用于坏块管理，代替原有的旧块时，会被标记为Used类型。类型为Signature的数据块中存储的是Flash写入数据时的编码信息，每次对于一个page的写入，会生成128bit的签名，用于纠错和校验。当挂载文件系统时，会读取这些签名的位置信息，将数据对应的签名位置存储在内存中，从而加速读取数据时的校验。
 
-## 层次结构
-
-
-
 ## 主要功能
 
 ### 写入缓存
@@ -151,19 +147,96 @@ CRC32是一个性能极高的校验算法，我们在写入数据时默认采用
 
 #### 相关数据结构
 
+**BlockType**
 
+* MappingTable
+* Signature
+* Used
+* Unused
+* Unknown
+
+标志Reserved Region数据块的用途。
+
+**TranslationLayer**
+
+* disk_manager
+* write_cache
+* used_table
+* map_v_table
+* sign_block_map
+* sign_offset_map
+* use_max_block_no
+* max_block_no
+* table_block_no
+* sign_block_no
+* sign_block_offset
+* write_speed
+* read_speed
+* block_num
+* err_block_num
+* last_err_time
+
+TranslationLayer是Translation Layer的主要控制类。disk_manager持有下层的磁盘管理类。write_cache是写入缓存，used_table存储了Reserved Region中已经被使用的块，map_v_table存储了坏块的映射关系，当出现坏块时，将坏块的逻辑地址映射到Reserved Region中一个还未被使用的块中。sign_block_map和sign_block_offset存储了Main Area中page数据对应的签名位置。use_max_block_no是上层能够使用的最大逻辑块号，即上层不允许直接操作Reserved Region，max_block_no是磁盘的最大块号。table_block_no存储的是MappingTable块的位置，sign_block_no和sign_block_offse存储的是当前可写入签名的位置，当一个数据块写入签名写满后，需要寻找一个空白块作为后续的签名存储。Translation Layer直接访问Disk Layer，write speed和read speed记录了Disk Layer的平均读写速率。block_num是磁盘的所有块的数量，err_block_num是坏块的数量。last_err_time记录了上次坏块的出现时间。
 
 #### 关键函数
 
 **init**
 
+初始化Translation Layer，为WondFS建立起Translation Layer的视图。
+
+执行流程：
+
+* 根据use_max_block_no和max_block_no确定Reserved Region的范围。
+* 依次读取每个块，并对块进行处理，通过块在特定位置的Magic Number对块的类型进行区分。
+* 如果该块是Mapping Table，解析block中的数据，在内存中建立起tlb/plb映射表，统计坏块情况。
+* 如果该块是Siganture，解析block中的数据，更新内存中的sign_block_map、sign_offset_map、sign_block_no和sign_block_offset。
+
 **read**
+
+根据block_no读取块数据。
+
+执行流程：
+
+* 根据block_no确定block中page的起始地址和结束地址。
+* 判断写缓存中是否有对应page的数据，如果写缓存中有相关page的数据，以写缓存内容为标准。
+* 根据map_v_table判断该块是否由于出现坏块被映射成其他地址的块。确定实际需要在磁盘上访问的块号。
+* 调用disk_manager方法读取该块数据。
+* 根据读取时间，更新read_speed。
+* 调用check_block方法检查block中的数据是否出现错误。为每个page的数据都根据他的签名进行校验。
+* 返回数据。
 
 **write**
 
+根据page的address，写入相应的数据。
+
+执行流程：
+
+* 插入写缓存。
+* 如果写缓存不用flush到磁盘上，直接返回。如果写缓存已满，需要flush到磁盘上，继续执行下面的流程。
+* 读出写缓存的所有数据。
+* 为写缓存的每个page在Reserved Region的签名块中使用纠错编码算法写入签名。
+* 调用transfer方法根据map_v_table确定实际需要在磁盘上写入的位置。
+* 将数据写入磁盘。
+* 更新write_speed。
+
 **write_block_direct**
+
+绕过写缓存，直接写入一个block的数据。
+
+执行流程：
+
+* 为每个page在Reserved Region的签名块中使用纠错编码算法写入签名。
+* 调用transfer方法根据map_v_table确定实际需要在磁盘上写入的位置。
+* 将数据写入磁盘。
+* 更新write_speed。
 
 **erase**
 
+擦除一个block。
 
+执行流程：
 
+* 如果写缓存中有相关page的数据，清除写缓存相关数据。
+* 更新sign_block_map和sign_offset_map，清除签名的映射。
+* 调用transfer方法根据map_v_table确定实际需要在磁盘上擦除的块号。
+* 调用disk_manager的disk_erase方法擦除相关块。
