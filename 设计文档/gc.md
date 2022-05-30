@@ -38,19 +38,102 @@ TRIM命令是常用的解决写入放大的方法，TRIM是一个SATA命令，�
 
 **BlockInfo**
 
+* size
+* block_no
+* reserved_size
+* reserved_offset
+* erase_count
+* last_erase_time
+* average_age
+* dirty_num
+* clean_num
+* used_num
+* used_map
 
+BlockInfo记录了一个block的使用情况以及各种基本信息。
+
+**BlockTable**
+
+* size
+* table
+
+size记录了block个数，table存储BlockInfo。
+
+**PagedUsedStatus**
+
+* Clean
+* Dirty
+* Busy
+
+Clean表示page是干净的，dirty表示page存储的是脏数据，Busy表示page存储的数据在使用中。
 
 #### 关键函数
 
+**get_block_info**
 
+获取BlockInfo。
 
+**set_block_info**
 
+设置BlockInfo。
+
+**get_page**
+
+获取page的使用情况。
+
+**set_page**
+
+设置page的使用情况。
+
+**erase_block**
+
+擦除block。
+
+**set_erase_count**
+
+设置block的erase count。
+
+**set_last_erase_time**
+
+设置block的last erase time。
+
+**set_average_age**
+
+设置block的average age。
 
 ### GCManager
 
 #### 相关数据结构
 
+**GCStrategy**
 
+* Forward
+* BackgroundSimple
+* BackgroundCold
+
+Forward是前台GC，BackgroundSimple是后台标准GC，BackgroundCold表示后台回收冷块。
+
+**GCEventGroup**
+
+存储GCEvent事件。
+
+**EraseGCEvent**
+
+GC擦除事件。
+
+**MoveGCEvent**
+
+GC移动page事件。
+
+**GCManager**
+
+* need_sync
+* hot_blocks
+* normal_blocks
+* cold_blocks
+* block_table
+
+GC模块的主要控制类。
 
 #### 关键函数
 
