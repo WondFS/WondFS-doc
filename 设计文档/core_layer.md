@@ -1,8 +1,8 @@
-## 功能实现
+# Core Layer
 
-### SuperStat
+Core Layer是整个WondFS的“大脑”，在WondFS中起到承上启下以及调度整个文件系统的作用。Core Layer是WondFS中代码结构最复杂的一层，包括了BIT、PIT、Journal、SuperStat、VAM、KV、GC等众多组件。
 
-
+## 部分功能实现
 
 ### BIT
 
@@ -106,35 +106,3 @@ CoreManager对磁盘的写入操作会修改page的使用情况，通过set_page
 **need_sync**
 
 通过is_op和sync变量判断是否要将PIT同步更新到磁盘中的PIT Region
-
-### Journal
-
-
-
-### VAM
-
-
-
-### CoreManager
-
-#### 相关数据结构
-
-
-
-#### 核心函数
-
-##### BIT相关
-
-**read_bit**
-
-在mount文件系统时读取BIT Region，默认情况下BIT Region有两个block，第二个block作为日志，如果第二个block中有数据，说明BIT Region的修改过程中发生了断电等导致数据不一致的行为，需要将第二个block中的数据写入第一个block中，并清空第二个block
-
-**set_pit**
-
-在read_bit中被调用，利用从BIT Region中读出来的数据初始化CoreManager的bit，并需要调用set_block_info和set_page方法将block的使用情况同步更新至CoreManager的gc中。
-
-**update_bit**
-
-更新BIT
-
-**set_last_erase_time
