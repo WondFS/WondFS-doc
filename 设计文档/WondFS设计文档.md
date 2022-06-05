@@ -1219,7 +1219,58 @@ FUSE的作用在于使得我们实现的WondFS文件系统可以绕开内核代�
 
 # 十四、测试
 
+### 挂载文件系统
 
+* 创建新的目录路径 mkdir test
+* 挂载文件系统 RUST_LOG="trace" ./target/debug/WondFS-fuse ~/Desktop/test
+
+![截屏2022-06-05 下午6.12.42](/Users/yurunjie/Desktop/WondFS-doc/设计文档/截屏2022-06-05 下午6.12.42.png)
+
+### 创建新的文件
+
+* 进入test目录 cd test
+* 创建新的文件 touch aaa.txt
+
+![截屏2022-06-05 下午6.17.24](/Users/yurunjie/Desktop/WondFS-doc/设计文档/截屏2022-06-05 下午6.17.24.png)
+
+### 创建新的目录
+
+* 创建新的目录 mkdir new_dir
+* 进入新的目录 cd new_dir
+
+![截屏2022-06-05 下午6.19.24](/Users/yurunjie/Desktop/WondFS-doc/设计文档/截屏2022-06-05 下午6.19.24.png)
+
+![截屏2022-06-05 下午6.20.02](/Users/yurunjie/Desktop/WondFS-doc/设计文档/截屏2022-06-05 下午6.20.02.png)
+
+### 查看当前目录的文件
+
+运行ls命令
+
+![截屏2022-06-05 下午6.20.55](/Users/yurunjie/Desktop/WondFS-doc/设计文档/截屏2022-06-05 下午6.20.55.png)
+
+### 查看当前目录文件的所有文件
+
+运行ls -a命令
+
+![截屏2022-06-05 下午6.21.16](/Users/yurunjie/Desktop/WondFS-doc/设计文档/截屏2022-06-05 下午6.21.16.png)
+
+### 向新文件写入数据
+
+运行 echo aaaaaaa > aaa.txt
+
+![截屏2022-06-05 下午6.22.09](/Users/yurunjie/Desktop/WondFS-doc/设计文档/截屏2022-06-05 下午6.22.09.png)
+
+### 读取文件数据
+
+运行 cat aaa.txxt
+
+![截屏2022-06-05 下午6.22.44](/Users/yurunjie/Desktop/WondFS-doc/设计文档/截屏2022-06-05 下午6.22.44.png)
+
+### 删除文件
+
+运行 rm aaa.txt
+
+![截屏2022-06-05 下午6.24.42](/Users/yurunjie/Desktop/WondFS-doc/设计文档/截屏2022-06-05 下午6.24.42.png)
 
 # 十五、总结与展望
 
